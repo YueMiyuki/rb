@@ -583,17 +583,20 @@ mod tests {
             header.set_size(bytes.len() as u64);
             header.set_mode(0o644);
             header.set_cksum();
-            ar.append_data(&mut header, name, &bytes[..]).unwrap();
+            ar.append_data(&mut header, name, bytes).unwrap();
         }
         let bytes = ar.into_inner().unwrap().finish().unwrap();
         std::fs::write(&crate_path, &bytes).unwrap();
         let cksum = rb_toolchain::download::sha256_file(&crate_path).unwrap();
-        let line = format!(
-            "{{\"name\":\"demo\",\"vers\":\"0.1.0\",\"deps\":[],\"cksum\":\"{cksum}\",\"features\":{{}},\"yanked\":false}}\n"
-        );
+        let line =
+            format!("{{\"name\":\"demo\",\"vers\":\"0.1.0\",\"deps\":[],\"cksum\":\"{cksum}\",\"features\":{{}},\"yanked\":false}}\n");
         std::fs::write(index.join("de/mo/demo"), line).unwrap();
         let dl_url = format!("file://{}/{{crate}}-{{version}}.crate", dl.display());
-        std::fs::write(index.join("config.json"), format!("{{\"dl\":{}}}", serde_json::to_string(&dl_url).unwrap())).unwrap();
+        std::fs::write(
+            index.join("config.json"),
+            format!("{{\"dl\":{}}}", serde_json::to_string(&dl_url).unwrap()),
+        )
+        .unwrap();
         let git = |args: &[&str]| {
             let out = std::process::Command::new("git")
                 .args(args)
@@ -625,6 +628,9 @@ mod tests {
             })
             .unwrap();
         assert!(downloaded);
-        assert_eq!(std::fs::read_to_string(dir.join("src/lib.rs")).unwrap(), "pub fn hi() -> u8 { 7 }\n");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("src/lib.rs")).unwrap(),
+            "pub fn hi() -> u8 { 7 }\n"
+        );
     }
 }

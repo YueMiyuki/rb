@@ -317,11 +317,20 @@ impl<'a> Engine<'a> {
         Ok(())
     }
 
+    const DEFER_INGEST_BYTES: u64 = 8 << 20;
+
     /// Big outputs get hashed by `rb __compact` after this process exits.
     pub fn defer_ingest(&self, ui: usize, record: &Record, duration: Duration) -> bool {
         let Some(store) = self.store else { return false };
         let p = &self.planned[ui];
         if !p.cacheable || self.graph.units[ui].mode == Mode::RunCustomBuild {
+            return false;
+        }
+        let bytes = record
+            .outputs
+            .iter()
+            .try_fold(0u64, |n, path| std::fs::metadata(path).map(|m| n.saturating_add(m.len())));
+        if bytes.is_ok_and(|n| n < Self::DEFER_INGEST_BYTES) {
             return false;
         }
         let job = serde_json::json!({

@@ -197,6 +197,14 @@ pub fn artifact_names(info: &TargetInfo, inv: &Invocation, crate_name: &str, nam
     if emits_meta {
         names.push(format!("lib{crate_name}-{name16}.rmeta"));
     }
+    // `--test` and `--cfg test` produce a bin without `--crate-type`, matching cargo.
+    let test_bin = inv.args.iter().any(|(a, _)| a == "--test") || inv.args.windows(2).any(|w| w[0].0 == "--cfg" && w[1].0 == "test");
+    if test_bin
+        && names.iter().all(|n| n.ends_with(".rmeta"))
+        && let Some(file) = output_file(info, "bin", crate_name, name16)
+    {
+        names.push(file);
+    }
     names
 }
 

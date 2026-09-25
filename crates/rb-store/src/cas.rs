@@ -250,6 +250,25 @@ impl Store {
         Ok(())
     }
 
+    pub fn rekey_ingest_jobs(&self, from: &str, to: &str) -> Result<()> {
+        if from == to {
+            return Ok(());
+        }
+        for (path, bytes) in self.ingest_jobs() {
+            let Ok(mut job) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+                continue;
+            };
+            if job.get("key").and_then(|k| k.as_str()) != Some(from) {
+                continue;
+            }
+            job["key"] = serde_json::Value::String(to.to_owned());
+            let tmp = link::sibling_tmp(&path);
+            fs::write(&tmp, serde_json::to_vec(&job)?)?;
+            fs::rename(&tmp, &path)?;
+        }
+        Ok(())
+    }
+
     pub fn alias(&self, from: &str, to: &str) -> Result<()> {
         let Some(src) = self.load_manifest(from)? else { return Ok(()) };
         let mut dst = self.load_manifest(to)?.unwrap_or_else(|| UnitManifest {

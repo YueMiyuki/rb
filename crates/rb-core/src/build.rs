@@ -130,7 +130,10 @@ fn parse_unstable(flags: &[String]) -> Result<Unstable> {
         }
         bail!("unknown `-Z` flag specified: {flag}");
     }
-    Ok(Unstable { json_target_spec, build_core })
+    Ok(Unstable {
+        json_target_spec,
+        build_core,
+    })
 }
 
 #[derive(Debug)]
@@ -1815,11 +1818,20 @@ pub fn scaffold(path: &Path, lib: bool, edition: Option<&str>, name: Option<&str
 }
 
 /// Build `core` and `compiler_builtins` from rust-src. Returns the `--extern` args cargo would pass.
-fn build_core_sysroot(opts: &BuildOptions, cfg: &RbConfig, shell: &Shell, rustc: &Rustc, target_dir: &Path, layout: &Layout) -> Result<Vec<String>> {
+fn build_core_sysroot(
+    opts: &BuildOptions,
+    cfg: &RbConfig,
+    shell: &Shell,
+    rustc: &Rustc,
+    target_dir: &Path,
+    layout: &Layout,
+) -> Result<Vec<String>> {
     if !rustc.nightly {
         bail!("`-Zbuild-std` requires a nightly compiler");
     }
-    let manifest = rustc.sysroot.join("lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins/Cargo.toml");
+    let manifest = rustc
+        .sysroot
+        .join("lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins/Cargo.toml");
     if !manifest.is_file() {
         bail!("`-Zbuild-std` requires the `rust-src` component; run `rustup component add rust-src`");
     }
@@ -1842,8 +1854,7 @@ fn build_core_sysroot(opts: &BuildOptions, cfg: &RbConfig, shell: &Shell, rustc:
             .filter_map(|e| e.ok())
             .map(|e| e.path())
             .filter(|p| {
-                p.extension().is_some_and(|x| x == "rmeta")
-                    && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with(prefix))
+                p.extension().is_some_and(|x| x == "rmeta") && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with(prefix))
             })
             .collect();
         hits.sort();
@@ -2338,8 +2349,7 @@ fn pack_pending_incremental(cfg: &RbConfig) {
     };
     let mut pending = Vec::new();
     for e in rd.filter_map(|e| e.ok()) {
-        let Ok(doc) =
-            std::fs::read(e.path()).and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).map_err(std::io::Error::other))
+        let Ok(doc) = std::fs::read(e.path()).and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).map_err(std::io::Error::other))
         else {
             continue;
         };
@@ -3053,6 +3063,7 @@ fn rekey(e: &Engine<'_>, graph: &unit::UnitGraph, state: &mut ProjectState) -> R
             && old.cacheable
         {
             store.alias(&old.key, &new.key)?;
+            store.rekey_ingest_jobs(&old.key, &new.key)?;
         }
         state.units.insert(new.key.clone(), rec);
         state.slots.insert(new.name.clone(), new.key.clone());
@@ -3211,11 +3222,17 @@ fn register_project(e: &Engine<'_>, state: &ProjectState) {
     let dir = e.ctx.cfg.home.join("projects");
     let target = e.ctx.layout.target_dir.to_string_lossy().into_owned();
     let id = &blake3::hash(target.as_bytes()).to_hex()[..16];
+    let mut keys: Vec<&String> = state.units.keys().collect();
+    for k in state.prev.values() {
+        if !state.units.contains_key(k) {
+            keys.push(k);
+        }
+    }
     let doc = serde_json::json!({
         "target_dir": target,
         "last_used": rb_store::now_secs(),
         "link_mode": e.link_mode.to_string(),
-        "keys": state.units.keys().collect::<Vec<_>>(),
+        "keys": keys,
     });
     let _ = std::fs::create_dir_all(&dir);
     let _ = std::fs::write(dir.join(format!("{id}.json")), doc.to_string());

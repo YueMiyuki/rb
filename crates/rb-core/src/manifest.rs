@@ -41,10 +41,7 @@ impl GitRef {
 pub enum DepSource {
     Registry(String),
     Path(PathBuf),
-    Git {
-        url: String,
-        reference: GitRef,
-    },
+    Git { url: String, reference: GitRef },
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

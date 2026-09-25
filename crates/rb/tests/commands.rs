@@ -46,6 +46,8 @@ impl Project {
             .env("RB_STORE_DIR", self.root.join("store"))
             .env("RB_COMPACT", "sync")
             .env_remove("RUSTC_WRAPPER")
+            .env_remove("CARGO_INCREMENTAL")
+            .env_remove("CARGO_BUILD_INCREMENTAL")
             .output()
             .unwrap()
     }
@@ -220,7 +222,7 @@ fn tree_matches_cargo_for_a_path_dep() {
         assert!(lock.status.success(), "{}", String::from_utf8_lossy(&lock.stderr));
     }
     let cargo = Command::new("cargo")
-        .args(["tree", "--charset", "ascii"])
+        .args(["tree", "--charset", "ascii", "--color", "never"])
         .current_dir(&app)
         .output()
         .unwrap();
@@ -239,7 +241,7 @@ fn tree_matches_cargo_for_a_path_dep() {
     assert!(rb.status.success(), "{}\n{rb_text}", String::from_utf8_lossy(&rb.stderr));
     assert_eq!(rb_text.trim(), cargo_text.trim(), "rb:\n{rb_text}\ncargo:\n{cargo_text}");
     let cargo_none = Command::new("cargo")
-        .args(["tree", "--prefix", "none"])
+        .args(["tree", "--prefix", "none", "--color", "never"])
         .current_dir(&app)
         .output()
         .unwrap();
@@ -293,7 +295,7 @@ fn tree_matches_cargo_for_a_path_dep() {
     .unwrap();
     let _ = std::fs::remove_file(app.join("Cargo.lock"));
     let cargo_inv = Command::new("cargo")
-        .args(["tree", "-i", "mylib", "--prefix", "none"])
+        .args(["tree", "-i", "mylib", "--prefix", "none", "--color", "never"])
         .current_dir(&app)
         .output()
         .unwrap();
@@ -341,7 +343,7 @@ fn tree_format_matches_cargo() {
     assert!(lock.status.success(), "{}", String::from_utf8_lossy(&lock.stderr));
     for fmt in ["{lib}", "{p} {l} {r}", "{lib} [{f}]"] {
         let cargo = Command::new("cargo")
-            .args(["tree", "--charset", "ascii", "--format", fmt])
+            .args(["tree", "--charset", "ascii", "--format", fmt, "--color", "never"])
             .current_dir(&app)
             .output()
             .unwrap();

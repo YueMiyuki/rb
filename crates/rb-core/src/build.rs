@@ -1937,10 +1937,11 @@ pub fn run(opts: &BuildOptions, cfg: &RbConfig, shell: &Shell) -> Result<()> {
         (None, false, Command::Test) => "test".into(),
         (None, false, _) => "dev".into(),
     };
-    let incremental = std::env::var("CARGO_INCREMENTAL")
-        .ok()
-        .map(|v| v == "1")
-        .or(cargo_cfg.incremental()?);
+    // Cargo: unset means the config file; `1`/`true`/`yes` on, `0`/`false`/`no` off.
+    let incremental = match std::env::var("CARGO_INCREMENTAL") {
+        Ok(v) => Some(matches!(v.as_str(), "1" | "true" | "yes")),
+        Err(_) => cargo_cfg.incremental()?,
+    };
     let mut profiles = Profiles::new(&ws.root_manifest, &cargo_cfg.profiles, &profile_name, incremental)?;
     profiles.weaken_host_debuginfo = no_target;
     let target_dir = opts
@@ -2884,11 +2885,16 @@ fn schedule(
                         let _ = meta_tx.send(Event::Meta(u));
                     };
                     let mut r = e.execute(u, threads, &meta);
+                    // Release the slot only after a failure is visible. Otherwise the next unit
+                    // starts before `failed` is set and `-j 1` still builds past the error.
+                    if r.is_err() {
+                        let _ = tx.send(Event::Done(u, Box::new(r)));
+                        drop(token);
+                        return;
+                    }
                     drop(token);
                     // The job token is for rustc. Dep-info can wait, same as cargo.
-                    if r.is_ok() {
-                        let _ = tx.send(Event::Unlocked(u));
-                    }
+                    let _ = tx.send(Event::Unlocked(u));
                     if let Ok(out) = r.as_mut()
                         && !out.restored
                         && e.graph.units[u].mode != Mode::RunCustomBuild

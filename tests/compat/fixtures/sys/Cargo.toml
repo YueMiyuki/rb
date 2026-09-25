@@ -1,0 +1,3 @@
+[workspace]
+members = ["native-sys", "consumer"]
+resolver = "2"

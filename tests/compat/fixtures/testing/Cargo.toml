@@ -1,0 +1,7 @@
+[workspace]
+members = ["tf", "tf-macros"]
+resolver = "2"
+
+# Exercises cargo's per-unit LTO modes (bitcode-only libraries, object-only proc-macros).
+[profile.release]
+lto = "thin"

@@ -1,0 +1,26 @@
+[package]
+name = "rb"
+description = "A Rust builder: cargo-compatible builds with a global content-addressed store, critical-path scheduling and zero-setup cross compilation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "rb"
+path = "src/main.rs"
+
+[features]
+default = ["msvc"]
+msvc = ["rb-toolchain/msvc"]
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+rb-core.workspace = true
+rb-store.workspace = true
+rb-toolchain.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

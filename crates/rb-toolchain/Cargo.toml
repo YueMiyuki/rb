@@ -1,0 +1,25 @@
+[package]
+name = "rb-toolchain"
+description = "rustc discovery and cross-compilation toolchain provisioning (zig, xwin) for rb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["msvc"]
+# Provision the MSVC CRT + Windows SDK with the xwin library.
+msvc = ["dep:xwin", "dep:indicatif"]
+
+[dependencies]
+anyhow.workspace = true
+blake3.workspace = true
+indicatif = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+shell-words.workspace = true
+tar.workspace = true
+ureq.workspace = true
+xwin = { workspace = true, optional = true }
+xz2.workspace = true

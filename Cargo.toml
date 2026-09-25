@@ -1,0 +1,50 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "tests/compat"]
+default-members = ["crates/rb"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.90"
+repository = "https://github.com/yuemiyuki/rb"
+
+[workspace.dependencies]
+rb-core = { path = "crates/rb-core" }
+rb-store = { path = "crates/rb-store" }
+rb-toolchain = { path = "crates/rb-toolchain" }
+
+anyhow = "1.0.100"
+blake3 = { version = "1.8", features = ["mmap", "rayon"] }
+clap = { version = "4.6", features = ["derive", "env"] }
+crossbeam-channel = "0.5"
+flate2 = "1"
+glob = "0.3"
+hex = "0.4"
+ignore = "0.4"
+indicatif = "0.18"
+jobserver = "0.1.35"
+libc = "0.2"
+reflink-copy = "0.1.30"
+semver = { version = "1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11"
+shell-words = "1.1"
+tar = "0.4"
+tempfile = "3.20"
+toml = "0.9"
+ureq = "3.4"
+walkdir = "2.5"
+zstd = { version = "0.13", features = ["zstdmt"] }
+xwin = { version = "0.10", default-features = false }
+xz2 = "0.1"
+
+[profile.release]
+lto = "thin"
+codegen-units = 16
+strip = "debuginfo"
+
+[profile.dev.package."*"]
+opt-level = 1

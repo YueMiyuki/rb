@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - run: cargo build --release
+      - name: Differential harness vs cargo (build, check, test, bench, doc)
+        run: |
+          for command in build check test bench doc; do
+            cargo run -p rb-compat -- --strict --command "$command"
+          done
+      - name: rb never runs cargo
+        run: |
+          mkdir -p "$RUNNER_TEMP/trap"
+          printf '#!/bin/sh\necho "cargo was invoked: $*" >&2\nexit 1\n' > "$RUNNER_TEMP/trap/cargo"
+          chmod +x "$RUNNER_TEMP/trap/cargo"
+          rb="$PWD/target/release/rb"
+          cp -R tests/compat/fixtures/tokio-app "$RUNNER_TEMP/app"
+          cd "$RUNNER_TEMP/app"
+          rm -f Cargo.lock
+          env -u CARGO PATH="$RUNNER_TEMP/trap:$PATH" "$rb" test
+          env -u CARGO PATH="$RUNNER_TEMP/trap:$PATH" "$rb" doc
+
+  cross:
+    name: cross from macOS
+    runs-on: macos-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release
+      - name: Provision zig targets
+        run: ./target/release/rb target add x86_64-unknown-linux-musl aarch64-unknown-linux-gnu x86_64-pc-windows-gnu
+      - name: Cross-build the native (cc) fixture
+        working-directory: tests/compat/fixtures/sys
+        run: |
+          ../../../../target/release/rb build \
+            --target x86_64-unknown-linux-musl \
+            --target aarch64-unknown-linux-gnu.2.17 \
+            --target x86_64-pc-windows-gnu \
+            --target x86_64-apple-darwin
+          file target/*/debug/consumer*

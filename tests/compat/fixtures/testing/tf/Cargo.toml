@@ -1,0 +1,18 @@
+[package]
+name = "tf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tf-macros = { path = "../tf-macros" }
+
+[features]
+extra = []
+
+[[test]]
+name = "needs-extra"
+required-features = ["extra"]
+
+[[bench]]
+name = "speed"
+harness = false

@@ -1,0 +1,3 @@
+/target
+/tests/compat/fixtures/*/target
+/tests/compat/fixtures/*/Cargo.lock
